@@ -4,6 +4,16 @@ using StyledStrings
 using Distributions
 
 
+
+"""
+    struct CornerPlot
+
+Description
+
+# Arguments:
+
+# Output:
+"""
 struct CornerPlot
     fig
     ranges
@@ -278,6 +288,15 @@ function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights,
    
 end
 
+"""
+    plot_extra_1D_distribution()
+
+Description
+
+# Arguments:
+
+# Output:
+"""
 function plot_extra_1D_distribution(corner_plot, name_x, distribution::Distribution; npoints=100, linewidth=2, color=:red, linestyle=:solid)
     xvals = LinRange(corner_plot.ranges[name_x][1], corner_plot.ranges[name_x][2],npoints)
     yvals = pdf(distribution, xvals)
