@@ -85,7 +85,7 @@ corner_plot.fig
 ##
 #=
 Beware that in the example above you can access `corner_plot.distributions_2d[:a][:b]`,
-but corner_plot.distributions_2d[:b][:a] is not defined. The first reference corresponds
+but `corner_plot.distributions_2d[:b][:a]` is not defined. The first reference corresponds
 to the x-axis of the 2D marginalized distribution, while the second one corresponds to
 the y-axis, and a matching plot must be present in the figure.
 =#
