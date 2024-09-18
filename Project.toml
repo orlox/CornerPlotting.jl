@@ -1,0 +1,13 @@
+name = "CornerPlotting.jl"
+uuid = "4a808bcd-0da0-4a1c-a768-2071018375da"
+authors = ["Pablo Marchant", "Alina Istrate", "Reinhold Willcox"]
+version = "0.1.0"
+
+[compat]
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
