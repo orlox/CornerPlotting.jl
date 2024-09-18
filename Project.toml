@@ -11,6 +11,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 
 [compat]
+Distributions = "0.25"
 CairoMakie = "0.12"
 StyledStrings = "1"
 StatsBase = "0.34"
