@@ -5,28 +5,28 @@ using Distributions
 
 results = Dict(:a=&gt;rand(500_000,3), :b=&gt;rand(500_000,3), :c=&gt;rand(500_000,3))
 results[:weights] = results[:a].*results[:b]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">500000×3 Matrix{Float64}:
- 0.0894838    0.550451     0.00364246
- 0.0347254    0.49842      0.547563
- 0.854987     0.659457     0.448381
- 0.000769601  0.379177     0.139864
- 0.0194805    0.000839276  0.442726
- 0.273479     0.0216995    0.171324
- 0.847513     0.103916     0.856544
- 0.0970137    0.0251438    0.255975
- 0.0337903    0.0130363    0.103508
- 0.282675     0.0715026    0.226689
- ⋮                         
- 0.156043     0.836233     0.493611
- 0.0952437    0.253968     0.311075
- 0.156358     0.487189     0.198851
- 0.521139     0.0953203    0.0169792
- 0.344616     0.0806101    0.176684
- 0.146302     0.1233       0.0554617
- 0.104354     0.250407     0.539523
- 0.09123      0.118485     0.000691872
- 0.568601     0.250373     0.0501402</code></pre><p>We can the produce the corner plot. We use Makie as the plotting backend, and we provide a default theme.</p><pre><code class="language-julia hljs">set_theme!(CornerPlotting.default_theme())
+ 0.0371429  0.283914   0.068703
+ 0.607484   0.130326   0.0156881
+ 0.11413    0.137872   0.547145
+ 0.0687431  0.157661   0.0208534
+ 0.285418   0.077817   0.0211992
+ 0.0291664  0.200599   0.0205656
+ 0.107162   0.100288   0.152674
+ 0.112125   0.296432   0.06801
+ 0.50517    0.0263937  0.320997
+ 0.0730955  0.763129   0.675661
+ ⋮                     
+ 0.570005   0.514178   0.362213
+ 0.167545   0.108295   0.486093
+ 0.101474   0.656328   0.0831896
+ 0.204116   0.562077   0.182791
+ 0.115307   0.0569924  0.254057
+ 0.0656523  0.370194   0.63592
+ 0.0485562  0.375328   0.0171473
+ 0.0664522  0.328354   0.203504
+ 0.128947   0.0257139  0.437949</code></pre><p>We can the produce the corner plot. We use Makie as the plotting backend, and we provide a default theme.</p><pre><code class="language-julia hljs">set_theme!(CornerPlotting.default_theme())
 corner_plot = CornerPlotting.CornerPlot(results,[:a, :b, :c])
-corner_plot.fig</code></pre><img src="f68467b2.png" alt="Example block output"/><p>The plotter also works with MCMCChains produced with Turing.jl. The example below samples a few variables (two of them correlated) and then includes in the corned plot the sampled variables to verify we obtain the expected result. Model is sampled with 4 chains here.</p><pre><code class="language-julia hljs">using Turing
+corner_plot.fig</code></pre><img src="fc71b9f9.png" alt="Example block output"/><p>The plotter also works with MCMCChains produced with Turing.jl. The example below samples a few variables (two of them correlated) and then includes in the corned plot the sampled variables to verify we obtain the expected result. Model is sampled with 4 chains here.</p><pre><code class="language-julia hljs">using Turing
 using Distributions
 
 @model function test_MCMC()
@@ -44,7 +44,7 @@ CornerPlotting.plot_extra_1D_distribution(corner_plot, :a, Normal(0.5,3))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, :b, Normal(0.1,5))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, Symbol(&quot;x[1]&quot;), Normal(1.0,1.0))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, Symbol(&quot;x[2]&quot;), Normal(2.0,1.0))
-corner_plot.fig</code></pre><img src="0bcd5aac.png" alt="Example block output"/><p>The same can be achieved when there is only one chain available</p><pre><code class="language-julia hljs">chain = sample(test_MCMC(), NUTS(), 5000)
+corner_plot.fig</code></pre><img src="d7ea8ba2.png" alt="Example block output"/><p>The same can be achieved when there is only one chain available</p><pre><code class="language-julia hljs">chain = sample(test_MCMC(), NUTS(), 5000)
 
 
 corner_plot = CornerPlotting.CornerPlot(chain,[:a, :b, Symbol(&quot;x[1]&quot;), Symbol(&quot;x[2]&quot;)])
@@ -52,7 +52,7 @@ CornerPlotting.plot_extra_1D_distribution(corner_plot, :a, Normal(0.5,3))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, :b, Normal(0.1,5))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, Symbol(&quot;x[1]&quot;), Normal(1.0,1.0))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, Symbol(&quot;x[2]&quot;), Normal(2.0,1.0))
-corner_plot.fig</code></pre><img src="7a8f6a5e.png" alt="Example block output"/><p>Finally, all axes of the plot can be accesed from the CornerPlot struct. This allows us to add arbitrary content.</p><pre><code class="language-julia hljs">xvals = LinRange(-5.0, 5.0, 100)
+corner_plot.fig</code></pre><img src="52cc7b24.png" alt="Example block output"/><p>Finally, all axes of the plot can be accesed from the CornerPlot struct. This allows us to add arbitrary content.</p><pre><code class="language-julia hljs">xvals = LinRange(-5.0, 5.0, 100)
 yvals = LinRange(0.0, 0.1, 100)
 
 axis_1d = corner_plot.distributions_1d[:a]
@@ -60,4 +60,4 @@ lines!(axis_1d, xvals, yvals)
 axis_2d = corner_plot.distributions_2d[:a][Symbol(&quot;x[1]&quot;)]
 scatter!(axis_2d, [0.0], [1.0], color=:red, markersize=30)
 
-corner_plot.fig</code></pre><img src="843f17a8.png" alt="Example block output"/><p>Beware that in the example above you can access <code>corner_plot.distributions_2d[:a][:b]</code>, but <code>corner_plot.distributions_2d[:b][:a]</code> is not defined. The first reference corresponds to the x-axis of the 2D marginalized distribution, while the second one corresponds to the y-axis, and a matching plot must be present in the figure.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 18 September 2024 20:31">Wednesday 18 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+corner_plot.fig</code></pre><img src="0a94404e.png" alt="Example block output"/><p>Beware that in the example above you can access <code>corner_plot.distributions_2d[:a][:b]</code>, but <code>corner_plot.distributions_2d[:b][:a]</code> is not defined. The first reference corresponds to the x-axis of the 2D marginalized distribution, while the second one corresponds to the y-axis, and a matching plot must be present in the figure.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Wednesday 18 September 2024 20:50">Wednesday 18 September 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
