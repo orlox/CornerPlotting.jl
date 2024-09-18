@@ -1,0 +1,6 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CornerPlotting = "4a808bcd-0da0-4a1c-a768-2071018375da"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"

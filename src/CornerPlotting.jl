@@ -1,5 +1,6 @@
 module CornerPlotting
 
-# Write your package code here.
+include("DefaultTheme.jl")
+include("Plotter.jl")
 
 end
