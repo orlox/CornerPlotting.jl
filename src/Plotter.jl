@@ -31,7 +31,7 @@ Description
 # Output:
 """
 function CornerPlot(results, names::Vector{Symbol};
-        labels=nothing, ranges=Dict(), scaling=nothing,
+        labels=nothing, ranges=Dict(), scaling=Dict(),
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
         show_CIs=true, nbins=100, nbins_contour=20,
@@ -44,9 +44,6 @@ function CornerPlot(results, names::Vector{Symbol};
         if name ∉ keys(results)
             throw(ArgumentError("$name is not a valid key"))
         end
-        if name ∉ keys(ranges)
-            ranges[name] = quantile(results[name],[quantile_for_range, 1-quantile_for_range])
-        end
         distributions_2d[name] = Dict()
     end
     if isnothing(labels)
@@ -56,11 +53,22 @@ function CornerPlot(results, names::Vector{Symbol};
         end
     end
     if :weights ∈ keys(results) && use_weights
-        weights = results[:weights]
+        sample_weights = results[:weights]
     else
         # just create an array of ones with the needed size
         # not the most efficient but avoids having to write special cases later
-        weights = ones(size(results[names[1]]))
+        sample_weights = ones(size(results[names[1]]))
+    end
+    # detect ranges
+    for name in names
+        if name ∉ keys(ranges)
+            # maybe there is a way to avoid doing vec here
+            ranges[name] = quantile(vec(results[name]),weights(sample_weights),
+                                    [quantile_for_range, 1-quantile_for_range])
+            if name ∈ keys(scaling)
+                ranges[name] /= scaling[name]
+            end
+        end
     end
  
     # Create 2D density plots
@@ -70,16 +78,19 @@ function CornerPlot(results, names::Vector{Symbol};
             name_y = names[jj]
             axis = Axis(fig[jj+1,ii], xlabel=labels[name_x], ylabel=labels[name_y], height=axis_size, width=axis_size)
             distributions_2d[name_x][name_y] = axis
-            if isnothing(scaling)
+            if name_x ∉ keys(scaling)
                 values_x = results[name_x]
+            else
+                values_x = results[name_x]./scaling[name_x]
+            end
+            if name_y ∉ keys(scaling)
                 values_y = results[name_y]
             else
-                values_x = results[name_x]./scaling[ii]
-                values_y = results[name_y]./scaling[jj]
+                values_y = results[name_y]./scaling[name_y]
             end
 
             plot_2D_density(axis, name_x, name_y, values_x, ranges[name_x], values_y, ranges[name_y],
-                weights, fractions_2D, nbins_heatmap=nbins, nbins_contour=nbins_contour)
+                sample_weights, fractions_2D, nbins_heatmap=nbins, nbins_contour=nbins_contour)
             if ii>1
                 hideydecorations!(axis, ticks=false, minorticks=false)
             end
@@ -97,12 +108,12 @@ function CornerPlot(results, names::Vector{Symbol};
         name_x = names[ii]
         axis = Axis(fig[ii+1,ii], xlabel=labels[name_x], height=axis_size, width=axis_size)
         distributions_1d[name_x] = axis
-        if isnothing(scaling)
+        if name_x ∉ keys(scaling)
             values_x = results[name_x]
         else
-            values_x = results[name_x]./scaling[ii]
+            values_x = results[name_x]./scaling[name_x]
         end
-        (xmin, xmode, xmax) = plot_compound_1D_density(axis, name_x, values_x, ranges[name_x], weights, fraction_1D, nbins)
+        (xmin, xmode, xmax) = plot_compound_1D_density(axis, name_x, values_x, ranges[name_x], sample_weights, fraction_1D, nbins)
 
         # Remove labels on the diagonals, except xlabel on the bottom right
         hideydecorations!(axis)
@@ -177,7 +188,9 @@ function plot_2D_density(axis, name_x, name_y, values_x, ranges_x, values_y, ran
     missing_weight = sum(sample_weights[.!filter])
     frac_lost = missing_weight/total_weight
 
-    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), nbins=nbins_heatmap) 
+    edges = (LinRange(ranges_x[1], ranges_x[2], nbins_heatmap+1),
+             LinRange(ranges_y[1], ranges_y[2], nbins_heatmap+1))
+    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges)#, nbins=nbins_heatmap) 
     x_hm = (h_hm.edges[1][2:end] .+ h_hm.edges[1][1:end-1])./2
     y_hm = (h_hm.edges[2][2:end] .+ h_hm.edges[2][1:end-1])./2
     heatmap!(axis, x_hm, y_hm, h_hm.weights, colormap=:dense)
@@ -194,12 +207,13 @@ function plot_2D_density(axis, name_x, name_y, values_x, ranges_x, values_y, ran
         correction = 1/(1 - frac_lost)
     end
 
-    h_ct = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), nbins=nbins_contour) 
+    edges = (LinRange(ranges_x[1], ranges_x[2], nbins_contour+1),
+             LinRange(ranges_y[1], ranges_y[2], nbins_contour+1))
+    h_ct = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges) 
     x_ct = (h_ct.edges[1][2:end] .+ h_ct.edges[1][1:end-1])./2
     y_ct = (h_ct.edges[2][2:end] .+ h_ct.edges[2][1:end-1])./2
     bounds = get_bounds_for_fractions(h_ct, fractions./correction)
     contour!(axis, x_ct, y_ct, h_ct.weights, levels=bounds, color=(:black, 0.5))
-
 
 end  
 
@@ -222,7 +236,8 @@ function plot_1D_density(axis, values, range, chain_weights, fraction_1D, nbins;
 
     frac_lost = missing_weight/total_weight
     
-    h = fit(Histogram, values, chain_weights, nbins=nbins)
+    edges = LinRange(range[1], range[2], nbins+1)
+    h = fit(Histogram, values, chain_weights, edges)
     x =(h.edges[1][2:end] .+ h.edges[1][1:end-1])./2
     dx = 1
     if length(x) > 1
