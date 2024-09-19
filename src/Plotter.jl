@@ -193,7 +193,7 @@ function plot_2D_density(axis, name_x, name_y, values_x, ranges_x, values_y, ran
     h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges)#, nbins=nbins_heatmap) 
     x_hm = (h_hm.edges[1][2:end] .+ h_hm.edges[1][1:end-1])./2
     y_hm = (h_hm.edges[2][2:end] .+ h_hm.edges[2][1:end-1])./2
-    heatmap!(axis, x_hm, y_hm, h_hm.weights, colormap=:dense)
+    heatmap!(axis, x_hm, y_hm, h_hm.weights, colormap=:dense, colorrange=(0, maximum(h_hm.weights)))
 
     #we correct for samples outside the range, assuming they are
     #not part of the HDI. A basic check is to verify we dont have too
