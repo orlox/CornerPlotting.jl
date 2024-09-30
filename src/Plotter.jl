@@ -56,6 +56,8 @@ distributions. Values are provided as a Vector of fractions.
 - nbins_contour: Number of bins used to plot the contours in the 2D marginalized distributions.
 using `nbins_contour<nbins` allows for smoother contous.
 - axis_size: The Makie axis will be set to have width and height equal to this value.
+- supertitle: The title of the plot
+- supertitlefontsize: Fontsize of the title 
 
 # Output:
 Returns an instance of CornerPlot
@@ -65,7 +67,7 @@ function CornerPlot(results, names::Vector{Symbol};
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
         show_CIs=true, nbins=100, nbins_contour=20,
-        axis_size=100)
+        axis_size=100, supertitle=nothing, supertitlefontsize=25)
 
     num_col = length(names)
     
@@ -164,6 +166,10 @@ function CornerPlot(results, names::Vector{Symbol};
             hidespines!(axis)
         end
     end     
+
+    if !isnothing(supertitle)
+        Label(fig, text=supertitle, fontsize=supertitlefontsize)
+    end
     resize_to_layout!(fig)
     
     return CornerPlot(fig, ranges, distributions_1d, distributions_2d)
