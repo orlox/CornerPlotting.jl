@@ -168,7 +168,7 @@ function CornerPlot(results, names::Vector{Symbol};
     end     
 
     if !isnothing(supertitle)
-        Label(fig, text=supertitle, fontsize=supertitlefontsize)
+        Label(fig[0,:], text=supertitle, fontsize=supertitlefontsize)
     end
     resize_to_layout!(fig)
     
@@ -456,7 +456,15 @@ of a corner plot The Distribution will be plotted within the range determined fo
 """
 function plot_extra_1D_distribution(corner_plot, name_x, distribution::Distribution; npoints=100, linewidth=2, color=:red, linestyle=:solid)
     xvals = LinRange(corner_plot.ranges[name_x][1], corner_plot.ranges[name_x][2],npoints)
-    yvals = pdf(distribution, xvals)
-    lines!(corner_plot.distributions_1d[name_x], xvals, yvals,
+    
+    # If distribution is a Dirac delta function, plot only a line
+    if maximum(distribution) == minimum(distribution) # Not sure if best way to identify delta function...
+        vlines!(corner_plot.distributions_1d[name_x], mean(distribution),
             linewidth=linewidth, color=color, linestyle=linestyle)
+    else
+        yvals = pdf(distribution, xvals)
+        lines!(corner_plot.distributions_1d[name_x], xvals, yvals,
+                linewidth=linewidth, color=color, linestyle=linestyle)
+    end
+
 end
