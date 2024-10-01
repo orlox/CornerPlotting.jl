@@ -56,6 +56,8 @@ distributions. Values are provided as a Vector of fractions.
 - nbins_contour: Number of bins used to plot the contours in the 2D marginalized distributions.
 using `nbins_contour<nbins` allows for smoother contous.
 - axis_size: The Makie axis will be set to have width and height equal to this value.
+- supertitle: The title of the plot
+- supertitlefontsize: Fontsize of the title 
 
 # Output:
 Returns an instance of CornerPlot
@@ -65,7 +67,7 @@ function CornerPlot(results, names::Vector{Symbol};
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
         show_CIs=true, nbins=100, nbins_contour=20,
-        axis_size=100)
+        axis_size=100, supertitle=nothing, supertitlefontsize=25)
 
     num_col = length(names)
     
@@ -164,6 +166,10 @@ function CornerPlot(results, names::Vector{Symbol};
             hidespines!(axis)
         end
     end     
+
+    if !isnothing(supertitle)
+        Label(fig[0,:], text=supertitle, fontsize=supertitlefontsize)
+    end
     resize_to_layout!(fig)
     
     return CornerPlot(fig, ranges, distributions_1d, distributions_2d)
@@ -450,7 +456,15 @@ of a corner plot The Distribution will be plotted within the range determined fo
 """
 function plot_extra_1D_distribution(corner_plot, name_x, distribution::Distribution; npoints=100, linewidth=2, color=:red, linestyle=:solid)
     xvals = LinRange(corner_plot.ranges[name_x][1], corner_plot.ranges[name_x][2],npoints)
-    yvals = pdf(distribution, xvals)
-    lines!(corner_plot.distributions_1d[name_x], xvals, yvals,
+    
+    # If distribution is a Dirac delta function, plot only a line
+    if maximum(distribution) == minimum(distribution) # Not sure if best way to identify delta function...
+        vlines!(corner_plot.distributions_1d[name_x], mean(distribution),
             linewidth=linewidth, color=color, linestyle=linestyle)
+    else
+        yvals = pdf(distribution, xvals)
+        lines!(corner_plot.distributions_1d[name_x], xvals, yvals,
+                linewidth=linewidth, color=color, linestyle=linestyle)
+    end
+
 end
