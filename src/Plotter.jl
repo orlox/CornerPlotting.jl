@@ -21,6 +21,7 @@ struct CornerPlot
     ranges
     distributions_1d
     distributions_2d
+    credible_intervals
 end
 
 """
@@ -132,6 +133,7 @@ function CornerPlot(results, names::Vector{Symbol};
     end
     # Create 1D PDFs along the diagonal
     distributions_1d = Dict() # we will add the distributions with their names here
+    credible_intervals = Dict()
     latex_bounds_array = Array{AbstractString}(undef, num_col)
     for ii in 1:num_col
         name_x = names[ii]
@@ -154,8 +156,10 @@ function CornerPlot(results, names::Vector{Symbol};
         str_xmode = round(xmode, sigdigits=3)
         # for upper and lower bounds
         min_diff = eps(xmax-xmin) # use this to filter small errors, eps is machine epsilon
-        str_upp = round(xmax - xmode < min_diff ? 0.0 : xmax-xmode, sigdigits=3)
-        str_low = round(xmode - xmin < min_diff ? 0.0 : xmode-xmin, sigdigits=3)
+        plus_err = xmax - xmode < min_diff ? 0.0 : xmax-xmode
+        minus_err = xmode - xmin < min_diff ? 0.0 : xmode-xmin
+        str_upp = round(plus_err, sigdigits=3)
+        str_low = round(minus_err, sigdigits=3)
         latex_bounds = L"%$(str_xmode)^{+%$(str_upp)}_{-%$(str_low)}"
         latex_bounds_array[ii] = latex_bounds
         println(labels[name_x]*"="*latex_bounds)
@@ -165,10 +169,19 @@ function CornerPlot(results, names::Vector{Symbol};
             hidedecorations!(axis)
             hidespines!(axis)
         end
+        #save intervals
+        credible_intervals[name_x] = Dict(
+            :mode => xmode,
+            :min => xmin,
+            :max => xmax,
+            :plus_err => plus_err,
+            :minus_err => minus_err,
+            :fraction_1D => fraction_1D
+        )
     end     
     resize_to_layout!(fig)
     
-    return CornerPlot(fig, ranges, distributions_1d, distributions_2d)
+    return CornerPlot(fig, ranges, distributions_1d, distributions_2d, credible_intervals)
 end
 
 """
@@ -262,7 +275,7 @@ function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, rang
 
     edges = (LinRange(range_x[1], range_x[2], nbins_heatmap+1),
              LinRange(range_y[1], range_y[2], nbins_heatmap+1))
-    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges, nbins=nbins_heatmap) 
+    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges)
     x_hm = (h_hm.edges[1][2:end] .+ h_hm.edges[1][1:end-1])./2
     y_hm = (h_hm.edges[2][2:end] .+ h_hm.edges[2][1:end-1])./2
     dx_hm = x_hm[2]-x_hm[1]
