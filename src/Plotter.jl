@@ -152,8 +152,10 @@ function CornerPlot(results, names::Vector{Symbol};
         end
         # Configure confidence intervals
         str_xmode = round(xmode, sigdigits=3)
-        str_upp = round(xmax-xmode, sigdigits=3)
-        str_low = round(xmode-xmin, sigdigits=3)
+        # for upper and lower bounds
+        min_diff = eps(xmax-xmin) # use this to filter small errors, eps is machine epsilon
+        str_upp = round(xmax - xmode < min_diff ? 0.0 : xmax-xmode, sigdigits=3)
+        str_low = round(xmode - xmin < min_diff ? 0.0 : xmode-xmin, sigdigits=3)
         latex_bounds = L"%$(str_xmode)^{+%$(str_upp)}_{-%$(str_low)}"
         latex_bounds_array[ii] = latex_bounds
         println(labels[name_x]*"="*latex_bounds)
@@ -260,7 +262,7 @@ function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, rang
 
     edges = (LinRange(range_x[1], range_x[2], nbins_heatmap+1),
              LinRange(range_y[1], range_y[2], nbins_heatmap+1))
-    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges)#, nbins=nbins_heatmap) 
+    h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges, nbins=nbins_heatmap) 
     x_hm = (h_hm.edges[1][2:end] .+ h_hm.edges[1][1:end-1])./2
     y_hm = (h_hm.edges[2][2:end] .+ h_hm.edges[2][1:end-1])./2
     dx_hm = x_hm[2]-x_hm[1]
@@ -300,7 +302,7 @@ function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, rang
         dy_ct = dy_hm
         z_ct = z_hm
     end
-    bounds = get_bounds_for_fractions(h_ct, fractions./correction)
+    bounds = get_bounds_for_fractions(h_ct, fractions.*correction)
     if !isnothing(axis)
         contour!(axis, x_ct, y_ct, h_ct.weights, levels=bounds, color=(:black, 0.5))
     end
