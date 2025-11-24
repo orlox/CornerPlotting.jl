@@ -19,3 +19,43 @@ function default_theme(;rowcolgap=10, xticklabelrotation=pi/4,labelfontsize=16, 
                        xticklabelrotation=xticklabelrotation),
                   )
 end
+
+"""
+    oneD_lines_default_kwargs
+Default style options when doing a line in the 1D marginalized plots
+for an individual chain
+"""
+oneD_lines_default_kwargs = (color=(:gray, 0.25), linewidth=1)
+
+"""
+    oneD_lines_full_default_kwargs
+Default style options when doing a line in the 1D marginalized plots
+for all chains together (or for the single chain if only one is available)
+"""
+oneD_lines_full_default_kwargs = (color=(:blue, 1.0), linewidth=1)
+
+"""
+    oneD_lines_full_default_kwargs
+Default style options when doing a band in the 1D marginalized plots
+to show the credible interval
+"""
+oneD_band_default_kwargs = (color=(:gray, 0.4),)
+
+"""
+    oneD_vlines_default_kwargs
+Default style options when doing a vline in the 1D marginalized plots
+to show the mode
+"""
+oneD_vlines_default_kwargs = (color=(:black, 1.0), linewidth=1)
+
+"""
+    twoD_heatmap_default_kwargs
+Default style options for the call to `heatmap!` in the 2D marginalized plots
+"""
+twoD_heatmap_default_kwargs = (colormap=:dense,)
+
+"""
+    twoD_contour_default_kwargs
+Default style for the call to `contour!` in the 2D marginalized plots
+"""
+twoD_contour_default_kwargs = (color=(:black,0.5),)

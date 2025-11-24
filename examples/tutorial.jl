@@ -18,7 +18,7 @@ results[:weights] = results[:a].*results[:b]
 
 ##
 #=
-We can the produce the corner plot. We use Makie as the plotting backend,
+We can then produce the corner plot. We use Makie as the plotting backend,
 and we provide a default theme.
 =#
 
@@ -43,10 +43,10 @@ using Distributions
 end
 
 num_chains = 4
-chain = sample(test_MCMC(), NUTS(), MCMCThreads(), 1000, num_chains)
+chains = sample(test_MCMC(), NUTS(), MCMCThreads(), 1000, num_chains)
 
 ##
-corner_plot = CornerPlotting.CornerPlot(chain,[:a, :b, Symbol("x[1]"), Symbol("x[2]")])
+corner_plot = CornerPlotting.CornerPlot(chains,[:a, :b, Symbol("x[1]"), Symbol("x[2]")])
 CornerPlotting.plot_extra_1D_distribution(corner_plot, :a, Normal(0.5,3))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, :b, Normal(0.1,5))
 CornerPlotting.plot_extra_1D_distribution(corner_plot, Symbol("x[1]"), Normal(1.0,1.0))
@@ -69,7 +69,7 @@ corner_plot.fig
 
 ##
 #=
-Finally, all axes of the plot can be accesed from the CornerPlot struct.
+Additionally, all axes of the plot can be accessed from the CornerPlot struct.
 This allows us to add arbitrary content.
 =#
 xvals = LinRange(-5.0, 5.0, 100)
@@ -89,3 +89,17 @@ but `corner_plot.distributions_2d[:b][:a]` is not defined. The first reference c
 to the x-axis of the 2D marginalized distribution, while the second one corresponds to
 the y-axis, and a matching plot must be present in the figure.
 =#
+
+##
+#=
+It is also possible to plot multiple results in the same corner plot.
+=#
+
+@model function test_MCMC()
+    a ~ Normal(0,3)
+    b ~ Normal(1, 5)
+    x ~ MvNormal([1.5, 1.0], [1.0 -0.5;-0.5 1.0])
+end
+chains_alt = sample(test_MCMC(), NUTS(), MCMCThreads(), 1000, num_chains)
+##
+corner_plot = CornerPlotting.MultiCornerPlot([chains,chains_alt], [:a, :b, Symbol("x[1]"), Symbol("x[2]")])
