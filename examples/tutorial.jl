@@ -92,7 +92,9 @@ the y-axis, and a matching plot must be present in the figure.
 
 ##
 #=
-It is also possible to plot multiple results in the same corner plot.
+It is also possible to plot multiple results in the same corner plot. Under the hood this calls the `CornerPlot` function repeatedly, hiding overlapping details such as the heatmaps. For the moment no credible intervals are shown in
+the 1D marginalized distributions, but these can be accessed
+via `corner_plot.credible_intervals`.
 =#
 
 @model function test_MCMC()
@@ -102,5 +104,5 @@ It is also possible to plot multiple results in the same corner plot.
 end
 sampled_chains_alt = sample(test_MCMC(), NUTS(), MCMCThreads(), 1000, num_chains)
 ##
-corner_plot = CornerPlotting.MultiCornerPlot([sampled_chains,sampled_chains_alt], [:a, :b, Symbol("x[1]"), Symbol("x[2]")])
+corner_plot = CornerPlotting.MultiCornerPlot([sampled_chains,sampled_chains_alt, single_chain], [:a, :b, Symbol("x[1]"), Symbol("x[2]")])
 corner_plot.fig

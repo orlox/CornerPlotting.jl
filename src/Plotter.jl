@@ -16,7 +16,7 @@ using as keys the name of each variable. Similarly, "distributions_2d" provides
 the Axes with 2D marginalized distributions as a dictionary of dictionaries. 
 
 """
-struct CornerPlot
+mutable struct CornerPlot
     fig
     ranges
     distributions_1d
@@ -52,7 +52,8 @@ for each sample.
 are determined using highest density intervals. By default 90% credible intervals are shown.
 - fractions_2d: Similar to `fraction_1d`, but used to determine the contours in the 2D marginalized
 distributions. Values are provided as a Vector of fractions.
-- show_CIs: If true, credible intervals are shown in the corner plot.
+- show_CIs: If true, text for credible intervals is shown above each 1D marginalized plot.
+- show CI_band: If true, a band covering the range of the CI is shown in the 1D marginalized plot.
 - nbins: Number of bins in each axis used to plot the heatmaps and the 1D marginalized distributions
 - nbins_contour: Number of bins used to plot the contours in the 2D marginalized distributions.
 using `nbins_contour<nbins` allows for smoother contous.
@@ -73,7 +74,7 @@ function CornerPlot(results, names::Vector{Symbol};
         labels=nothing, ranges=Dict(), scaling=Dict(),
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
-        show_CIs=true, show_heatmap=true, nbins=100, nbins_contour=20,
+        show_CIs=true, show_CI_band=true, show_heatmap=true, nbins=100, nbins_contour=20,
         axis_size=100, corner_plot::Union{Nothing, CornerPlot}=nothing,
         oneD_lines_kwargs = oneD_lines_default_kwargs,
         oneD_lines_full_kwargs = oneD_lines_full_default_kwargs,
@@ -86,7 +87,6 @@ function CornerPlot(results, names::Vector{Symbol};
     num_col = length(names)
     
     distributions_2d = Dict() # this will store the 2D distributions in a dictionary of dictionaries
-    @show results
     for name in names
         if name ∉ keys(results)
             throw(ArgumentError("$name is not a valid key"))
@@ -171,6 +171,7 @@ function CornerPlot(results, names::Vector{Symbol};
         end
         (xmin, xmode, xmax), x, h, y, dx, frac_lost =
             plot_compound_1D_density(axis, name_x, values_x, ranges[name_x], sample_weights, fraction_1D, nbins;
+                    show_CI_band,
                     oneD_lines_kwargs = oneD_lines_kwargs,
                     oneD_lines_full_kwargs = oneD_lines_full_kwargs,
                     oneD_band_kwargs = oneD_band_kwargs,
@@ -445,6 +446,7 @@ credible interval is reported.
 - frac_lost: Fraction of samples (including weights) that is outside of `range`
 """
 function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights, fraction_1D, nbins;
+    show_CI_band = true,
     oneD_lines_kwargs = oneD_lines_default_kwargs,
     oneD_lines_full_kwargs = oneD_lines_full_default_kwargs,
     oneD_band_kwargs = oneD_band_default_kwargs,
@@ -488,7 +490,9 @@ function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights,
     if !isnothing(axis)
         # see if axis limits have been set, if so preserve ylims
         filter = x .>= xmin .&& x .<= xmax
-        band!(axis, x[filter], zeros(length(x[filter])), y[filter]; oneD_band_kwargs...)
+        if show_CI_band
+            band!(axis, x[filter], zeros(length(x[filter])), y[filter]; oneD_band_kwargs...)
+        end
         vlines!(axis, xmode; oneD_vlines_kwargs...)
         xlims!(axis, range_x[1], range_x[2])
         old_ylim = axis.limits.val[2]

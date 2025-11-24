@@ -28,6 +28,7 @@ are determined using highest density intervals. By default 90% credible interval
 - fractions_2d: Similar to `fraction_1d`, but used to determine the contours in the 2D marginalized
 distributions. Values are provided as a Vector of fractions.
 - show_CIs: If true, credible intervals are shown in the corner plot.
+- show CI_band: If true, a band covering the range of the CI is shown in the 1D marginalized plot.
 - nbins: Number of bins in each axis used to plot the heatmaps and the 1D marginalized distributions
 - nbins_contour: Number of bins used to plot the contours in the 2D marginalized distributions.
 using `nbins_contour<nbins` allows for smoother contous.
@@ -46,8 +47,12 @@ function MultiCornerPlot(results, names::Vector{Symbol};
         labels=nothing, ranges=Dict(), scaling=Dict(),
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
-        show_CIs=false, nbins=100, nbins_contour=20,
-        axis_size=100,
+        show_CIs=false, show_CI_band = false, nbins=100, nbins_contour=20, axis_size=100,
+        oneD_lines_multi_kwargs = oneD_lines_multi_default_kwargs,
+        oneD_lines_full_multi_kwargs = oneD_lines_full_multi_default_kwargs,
+        oneD_band_multi_kwargs = oneD_band_multi_default_kwargs,
+        oneD_vlines_multi_kwargs = oneD_vlines_multi_default_kwargs,
+        twoD_contour_multi_kwargs = twoD_contour_multi_default_kwargs
         )
     corner_plot = nothing
 
@@ -85,13 +90,31 @@ function MultiCornerPlot(results, names::Vector{Symbol};
         end
     end
 
-    for result in results
-        @show "caca",ranges
-        corner_plot = CornerPlot(result, names; labels=labels, ranges=copy(ranges), scaling=scaling,
+    credible_intervals = Dict()
+    for i in eachindex(results)
+        largs = length(oneD_lines_multi_kwargs)
+        oneD_lines_kwargs = oneD_lines_multi_kwargs[(i-1)%largs+1]
+        largs = length(oneD_lines_full_multi_kwargs)
+        oneD_lines_full_kwargs = oneD_lines_full_multi_kwargs[(i-1)%largs+1]
+        largs = length(oneD_band_multi_kwargs)
+        oneD_band_kwargs = oneD_band_multi_kwargs[(i-1)%largs+1]
+        largs = length(oneD_vlines_multi_kwargs)
+        oneD_vlines_kwargs = oneD_vlines_multi_kwargs[(i-1)%largs+1]
+        largs = length(twoD_contour_multi_kwargs)
+        twoD_contour_kwargs = twoD_contour_multi_kwargs[(i-1)%largs+1]
+        
+        corner_plot = CornerPlot(results[i], names; labels=labels, ranges=copy(ranges), scaling=scaling,
         fig=fig, quantile_for_range=quantile_for_range,
         use_weights = use_weights, fraction_1D=fraction_1D, fractions_2D=fractions_2D, 
-        show_CIs=show_CIs, show_heatmap=false, nbins=nbins, nbins_contour=nbins_contour,
-        axis_size=axis_size, corner_plot=corner_plot)
+        show_CIs=show_CIs, show_CI_band=show_CI_band, show_heatmap=false, nbins=nbins, nbins_contour=nbins_contour,
+        axis_size=axis_size, corner_plot=corner_plot,
+        oneD_lines_kwargs = oneD_lines_kwargs,
+        oneD_lines_full_kwargs = oneD_lines_full_kwargs,
+        oneD_band_kwargs = oneD_band_kwargs,
+        oneD_vlines_kwargs = oneD_vlines_kwargs,
+        twoD_contour_kwargs = twoD_contour_kwargs)
+        credible_intervals[i] = corner_plot.credible_intervals
     end
+    corner_plot.credible_intervals = credible_intervals
     return corner_plot
 end
