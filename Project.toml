@@ -1,7 +1,7 @@
 name = "CornerPlotting"
 uuid = "4a808bcd-0da0-4a1c-a768-2071018375da"
 authors = ["Pablo Marchant", "Alina Istrate", "Reinhold Willcox"]
-version = "0.1.1"
+version = "0.2.0"
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -13,7 +13,7 @@ StyledStrings = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
 [compat]
 MathTeXEngine = "0.6"
 Distributions = "0.25"
-CairoMakie = "0.12"
+CairoMakie = "0.12,0.13,0.14,0.15"
 StyledStrings = "1"
 StatsBase = "0.34"
 julia = "1.10"
