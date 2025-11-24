@@ -41,7 +41,7 @@ The corner plot will only include the values specified in `names`.
 variable of the plot. If ranges are not provided for a variable these are determined based on the
 `quantile_for_range` option.
 - scaling: Dictionary containing scaling factors for variables. For any `name` in `names` that
-is also a key of `scaling`, all values are divided by `scaling[name]`.
+is also a key of `scaling`, all values are divided by `scaling[name]`. Can be used to adjust units.
 - fig: The Makie figure used for the plot. If not provided it is created.
 - quantile_for_range: If ranges are not specified for an axis, then they are set to be between
 the quantiles `quantile_for_range` and `1- quantile_for_range`. This is done using weighted
@@ -406,7 +406,6 @@ function plot_1D_density(axis, values, range, chain_weights, nbins; lines_kwargs
     dx = x[2]-x[1]
     y = h.weights/(total_weight*dx)
     if !isnothing(axis)
-        @show lines_kwargs
         lines!(axis, x, y; lines_kwargs...)
     end
     return x, h, y, dx, frac_lost
@@ -487,11 +486,17 @@ function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights,
     end
 
     if !isnothing(axis)
+        # see if axis limits have been set, if so preserve ylims
         filter = x .>= xmin .&& x .<= xmax
         band!(axis, x[filter], zeros(length(x[filter])), y[filter]; oneD_band_kwargs...)
         vlines!(axis, xmode; oneD_vlines_kwargs...)
         xlims!(axis, range_x[1], range_x[2])
-        ylims!(axis, 0, 1.1*maximum(y))
+        old_ylim = axis.limits.val[2]
+        if isnothing(old_ylim)
+            ylims!(axis, 0, 1.1*maximum(y))
+        else
+            ylims!(axis, 0, 1.1*max(maximum(y),old_ylim[2]))
+        end
     end
 
     return (xmin, xmode, xmax), x, h, y, dx, frac_lost
