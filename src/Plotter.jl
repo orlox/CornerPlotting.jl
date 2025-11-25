@@ -16,7 +16,7 @@ using as keys the name of each variable. Similarly, "distributions_2d" provides
 the Axes with 2D marginalized distributions as a dictionary of dictionaries. 
 
 """
-struct CornerPlot
+mutable struct CornerPlot
     fig
     ranges
     distributions_1d
@@ -41,7 +41,7 @@ The corner plot will only include the values specified in `names`.
 variable of the plot. If ranges are not provided for a variable these are determined based on the
 `quantile_for_range` option.
 - scaling: Dictionary containing scaling factors for variables. For any `name` in `names` that
-is also a key of `scaling`, all values are divided by `scaling[name]`.
+is also a key of `scaling`, all values are divided by `scaling[name]`. Can be used to adjust units.
 - fig: The Makie figure used for the plot. If not provided it is created.
 - quantile_for_range: If ranges are not specified for an axis, then they are set to be between
 the quantiles `quantile_for_range` and `1- quantile_for_range`. This is done using weighted
@@ -52,11 +52,20 @@ for each sample.
 are determined using highest density intervals. By default 90% credible intervals are shown.
 - fractions_2d: Similar to `fraction_1d`, but used to determine the contours in the 2D marginalized
 distributions. Values are provided as a Vector of fractions.
-- show_CIs: If true, credible intervals are shown in the corner plot.
+- show_CIs: If true, text for credible intervals is shown above each 1D marginalized plot.
+- show CI_band: If true, a band covering the range of the CI is shown in the 1D marginalized plot.
 - nbins: Number of bins in each axis used to plot the heatmaps and the 1D marginalized distributions
 - nbins_contour: Number of bins used to plot the contours in the 2D marginalized distributions.
 using `nbins_contour<nbins` allows for smoother contous.
 - axis_size: The Makie axis will be set to have width and height equal to this value.
+- corner_plot: Allows to provide an already initialized CornerPlot, to overplot results from a
+different sample.
+- oneD_lines_kwargs : Named tuple containing the keyword arguments used in the call to `lines!` for individual chains
+- oneD_lines_full_kwargs: Named tuple containing keyword arguments used in the call to `lines!` for all chains grouped
+- oneD_band_default_kwargs: Named tuple containing keyword arguments used in the call to `band!`
+- oneD_vlines_default_kwargs: Named tuple containing keyword arguments used in the call to `vlines!`
+- twoD_heatmap_kwargs: named tuple containing named arguments for the call to `heatmap!`
+- twoD_contour_kwargs: named tuple containing named arguments for the call to `contour!`
 
 # Output:
 Returns an instance of CornerPlot
@@ -65,8 +74,15 @@ function CornerPlot(results, names::Vector{Symbol};
         labels=nothing, ranges=Dict(), scaling=Dict(),
         fig=Figure(), quantile_for_range=0.01,
         use_weights = true, fraction_1D=0.9, fractions_2D=[0.9], 
-        show_CIs=true, nbins=100, nbins_contour=20,
-        axis_size=100)
+        show_CIs=true, show_CI_band=true, show_heatmap=true, nbins=100, nbins_contour=20,
+        axis_size=100, corner_plot::Union{Nothing, CornerPlot}=nothing,
+        oneD_lines_kwargs = oneD_lines_default_kwargs,
+        oneD_lines_full_kwargs = oneD_lines_full_default_kwargs,
+        oneD_band_kwargs = oneD_band_default_kwargs,
+        oneD_vlines_kwargs = oneD_vlines_default_kwargs,
+        twoD_heatmap_kwargs = twoD_heatmap_default_kwargs,
+        twoD_contour_kwargs = twoD_contour_default_kwargs
+        )
 
     num_col = length(names)
     
@@ -106,7 +122,11 @@ function CornerPlot(results, names::Vector{Symbol};
         name_x = names[ii]
         for  jj in ii+1:num_col   # jj is the y-coord param
             name_y = names[jj]
-            axis = Axis(fig[jj+1,ii], xlabel=labels[name_x], ylabel=labels[name_y], height=axis_size, width=axis_size)
+            if isnothing(corner_plot)
+                axis = Axis(fig[jj+1,ii], xlabel=labels[name_x], ylabel=labels[name_y], height=axis_size, width=axis_size)
+            else
+                axis = corner_plot.distributions_2d[name_x][name_y]
+            end
             distributions_2d[name_x][name_y] = axis
             if name_x ∉ keys(scaling)
                 values_x = results[name_x]
@@ -120,7 +140,8 @@ function CornerPlot(results, names::Vector{Symbol};
             end
 
             plot_2D_density(axis, name_x, name_y, values_x, ranges[name_x], values_y, ranges[name_y],
-                sample_weights, fractions_2D, nbins_heatmap=nbins, nbins_contour=nbins_contour)
+                sample_weights, fractions_2D, nbins_heatmap=nbins, nbins_contour=nbins_contour, show_heatmap=show_heatmap,
+                twoD_heatmap_kwargs=twoD_heatmap_kwargs, twoD_contour_kwargs=twoD_contour_kwargs)
             if ii>1
                 hideydecorations!(axis, ticks=false, minorticks=false)
             end
@@ -137,7 +158,11 @@ function CornerPlot(results, names::Vector{Symbol};
     latex_bounds_array = Array{AbstractString}(undef, num_col)
     for ii in 1:num_col
         name_x = names[ii]
-        axis = Axis(fig[ii+1,ii], xlabel=labels[name_x], height=axis_size, width=axis_size)
+        if isnothing(corner_plot)
+            axis = Axis(fig[ii+1,ii], xlabel=labels[name_x], height=axis_size, width=axis_size)
+        else
+            axis = corner_plot.distributions_1d[name_x]
+        end
         distributions_1d[name_x] = axis
         if name_x ∉ keys(scaling)
             values_x = results[name_x]
@@ -145,7 +170,12 @@ function CornerPlot(results, names::Vector{Symbol};
             values_x = results[name_x]./scaling[name_x]
         end
         (xmin, xmode, xmax), x, h, y, dx, frac_lost =
-            plot_compound_1D_density(axis, name_x, values_x, ranges[name_x], sample_weights, fraction_1D, nbins)
+            plot_compound_1D_density(axis, name_x, values_x, ranges[name_x], sample_weights, fraction_1D, nbins;
+                    show_CI_band,
+                    oneD_lines_kwargs = oneD_lines_kwargs,
+                    oneD_lines_full_kwargs = oneD_lines_full_kwargs,
+                    oneD_band_kwargs = oneD_band_kwargs,
+                    oneD_vlines_kwargs = oneD_vlines_kwargs)
 
         # Remove labels on the diagonals, except xlabel on the bottom right
         hideydecorations!(axis)
@@ -181,7 +211,11 @@ function CornerPlot(results, names::Vector{Symbol};
     end     
     resize_to_layout!(fig)
     
-    return CornerPlot(fig, ranges, distributions_1d, distributions_2d, credible_intervals)
+    if isnothing(corner_plot)
+        return CornerPlot(fig, ranges, distributions_1d, distributions_2d, credible_intervals)
+    else
+        return corner_plot
+    end
 end
 
 """
@@ -227,7 +261,7 @@ function get_bounds_for_fractions(h, fractions)
 end
 
 """
-    plot_2D_density(axis, values, range, chain_weights, fraction_1D, nbins; color, linewidth)
+    plot_2D_density(axis, values, range, chain_weights, fraction_1D, nbins;)
 
 Creates a 1D marginalized distribution plot in `axis` from the sample values given in `values`.
 The plotted line is normalized, such that it corresponds to the PDF followed by the samples.
@@ -251,6 +285,8 @@ that these do not fall within the highest density region.
 - fractions: Contours will be plotted corresponding the HDIs containing each fraction contained in fractions.
 - nbins: Number of bins used for the heatmap.
 - nbins_contours: Number of bins used to determine the contours for the HDIs.
+- twoD_heatmap_kwargs: named tuple containing named arguments for the call to `heatmap!`
+- twoD_contour_kwargs: named tuple containing named arguments for the call to `contour!`
 
 # Output:
 - x_hm: Bin centers used in the heatmap in the x-axis
@@ -266,7 +302,10 @@ that these do not fall within the highest density region.
 - bounds: probablity values corresponding to the HDIs
 - frac_lost: Fraction of samples (including weights) that is outside of the ranges
 """
-function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, range_y, sample_weights, fractions; nbins_heatmap, nbins_contour=-1)
+function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, range_y, sample_weights, fractions;
+        nbins_heatmap, nbins_contour=-1, show_heatmap=true,
+        twoD_heatmap_kwargs=twoD_heatmap_default_kwargs,
+        twoD_contour_kwargs=twoD_contour_default_kwargs)
 
     filter = (values_x .> range_x[1]) .&& (values_x .< range_x[2]) .&& (values_y .> range_y[1]) .&& (values_y .> range_y[1])
     total_weight = sum(sample_weights)
@@ -274,15 +313,15 @@ function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, rang
     frac_lost = missing_weight/total_weight
 
     edges = (LinRange(range_x[1], range_x[2], nbins_heatmap+1),
-             LinRange(range_y[1], range_y[2], nbins_heatmap+1))
+            LinRange(range_y[1], range_y[2], nbins_heatmap+1))
     h_hm = fit(Histogram, (values_x[filter], values_y[filter]), weights(sample_weights[filter]), edges)
     x_hm = (h_hm.edges[1][2:end] .+ h_hm.edges[1][1:end-1])./2
     y_hm = (h_hm.edges[2][2:end] .+ h_hm.edges[2][1:end-1])./2
     dx_hm = x_hm[2]-x_hm[1]
     dy_hm = x_hm[2]-x_hm[1]
     z_hm = h_hm.weights/(total_weight*dx_hm*dy_hm)
-    if !isnothing(axis)
-        heatmap!(axis, x_hm, y_hm, z_hm, colormap=:dense, colorrange=(0, maximum(z_hm)))
+    if !isnothing(axis) && show_heatmap
+        heatmap!(axis, x_hm, y_hm, z_hm, colorrange=(0, maximum(z_hm)); twoD_heatmap_kwargs...)
     end
 
     #we correct for samples outside the range, assuming they are
@@ -317,7 +356,7 @@ function plot_2D_density(axis, name_x, name_y, values_x, range_x, values_y, rang
     end
     bounds = get_bounds_for_fractions(h_ct, fractions.*correction)
     if !isnothing(axis)
-        contour!(axis, x_ct, y_ct, h_ct.weights, levels=bounds, color=(:black, 0.5))
+        contour!(axis, x_ct, y_ct, h_ct.weights, levels=bounds; twoD_contour_kwargs...)
     end
     
     return x_hm, y_hm, z_hm, dx_hm, dy_hm, x_ct, y_ct, z_ct, dx_ct, dy_ct, bounds, frac_lost
@@ -343,6 +382,7 @@ credible interval is reported.
 - nbins: Number of bins used to build the histogram and determine the HDI
 - color: color used for the line plot.
 - linewidth: linewidth used for the line plot
+- lines_kwargs: named tuple with keyword arguments passed to the call to `lines!`
 
 # Output:
 - x: Bin centers used in the histogram
@@ -351,7 +391,7 @@ credible interval is reported.
 - y: Value of the PDF estimated at each bin
 - frac_lost: Fraction of samples (including weights) that is outside of `range`
 """
-function plot_1D_density(axis, values, range, chain_weights, nbins; color, linewidth)
+function plot_1D_density(axis, values, range, chain_weights, nbins; lines_kwargs=oneD_lines_full_default_kwargs)
 
     filter = values .> range[1] .&& values .< range[2]
     values = values[filter]
@@ -367,13 +407,13 @@ function plot_1D_density(axis, values, range, chain_weights, nbins; color, linew
     dx = x[2]-x[1]
     y = h.weights/(total_weight*dx)
     if !isnothing(axis)
-        lines!(axis, x, y, color=color, linewidth=linewidth)
+        lines!(axis, x, y; lines_kwargs...)
     end
     return x, h, y, dx, frac_lost
 end
 
 """
-    plot_compund_1D_density(axis, values, range, chain_weights, fraction_1D, nbins; color, linewidth)
+    plot_compound_1D_density(axis, values, range, chain_weights, fraction_1D, nbins; color, linewidth)
 
 Creates a 1D marginalized distribution plot in `axis` from the sample values given in `values`.
 If values contains more than one chain, it will plot the individual chains separetely, as well
@@ -392,6 +432,10 @@ that these do not fall within the highest density region.
 - fraction_1d: Fraction of samples (including weights) condained within the HDI for which the
 credible interval is reported.
 - nbins: Number of bins used to build the histogram and determine the HDI
+- oneD_lines_kwargs : Named tuple containing the keyword arguments used in the call to `lines!` for individual chains
+- oneD_lines_full_kwargs: Named tuple containing keyword arguments used in the call to `lines!` for all chains grouped
+- oneD_band_default_kwargs: Named tuple containing keyword arguments used in the call to `band!`
+- oneD_vlines_default_kwargs: Named tuple containing keyword arguments used in the call to `vlines!`
 
 # Output:
 - (xmin, xmode, xmax): Credible interval edges and mode.
@@ -401,19 +445,25 @@ credible interval is reported.
 - y: Value of the PDF estimated at each bin
 - frac_lost: Fraction of samples (including weights) that is outside of `range`
 """
-function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights, fraction_1D, nbins)
+function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights, fraction_1D, nbins;
+    show_CI_band = true,
+    oneD_lines_kwargs = oneD_lines_default_kwargs,
+    oneD_lines_full_kwargs = oneD_lines_full_default_kwargs,
+    oneD_band_kwargs = oneD_band_default_kwargs,
+    oneD_vlines_kwargs = oneD_vlines_default_kwargs,
+    )
 
     # If we have multiple chains, iterate over them
     if ndims(values_x)==2 && !isnothing(axis)
         for ii in 1:size(values_x)[2] # nchains
             chain_values = @view values_x[:,ii]
             chain_weights = @view sample_weights[:,ii]
-            plot_1D_density(axis, chain_values, range_x, chain_weights, nbins, color=(:gray, 0.25), linewidth=1)
+            plot_1D_density(axis, chain_values, range_x, chain_weights, nbins; lines_kwargs=oneD_lines_kwargs)
         end
     end
 
     # Plot once for all the values
-    x, h, y, dx, frac_lost = plot_1D_density(axis, values_x, range_x, sample_weights, nbins, color=(:blue, 1.0), linewidth=1)
+    x, h, y, dx, frac_lost = plot_1D_density(axis, values_x, range_x, sample_weights, nbins; lines_kwargs=oneD_lines_full_kwargs)
 
     #we correct for samples outside the range, assuming they are
     #not part of the HDI. A basic check is to verify we dont have too
@@ -438,11 +488,19 @@ function plot_compound_1D_density(axis, name, values_x, range_x, sample_weights,
     end
 
     if !isnothing(axis)
+        # see if axis limits have been set, if so preserve ylims
         filter = x .>= xmin .&& x .<= xmax
-        band!(axis, x[filter], zeros(length(x[filter])), y[filter], color=(:gray, 0.4))
-        vlines!(axis, xmode, color=(:black, 1.0), linewidth=1)
+        if show_CI_band
+            band!(axis, x[filter], zeros(length(x[filter])), y[filter]; oneD_band_kwargs...)
+        end
+        vlines!(axis, xmode; oneD_vlines_kwargs...)
         xlims!(axis, range_x[1], range_x[2])
-        ylims!(axis, 0, 1.1*maximum(y))
+        old_ylim = axis.limits.val[2]
+        if isnothing(old_ylim)
+            ylims!(axis, 0, 1.1*maximum(y))
+        else
+            ylims!(axis, 0, 1.1*max(maximum(y),old_ylim[2]))
+        end
     end
 
     return (xmin, xmode, xmax), x, h, y, dx, frac_lost
